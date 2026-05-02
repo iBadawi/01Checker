@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>01Checker — Topic Duplicate Checker</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #F2F4F8;
+      --surface:     #FFFFFF;
+      --surface2:    #F8F9FB;
+      --border:      #E2E6EC;
+      --border2:     #C8D2DF;
+      --navy:        #0D2D6B;
+      --navy-hover:  #0A2459;
+      --navy-dim:    #EBF0F9;
+      --green:       #16A34A;
+      --green-dim:   #DCFCE7;
+      --red:         #DC2626;
+      --red-dim:     #FEE2E2;
+      --amber:       #D97706;
+      --text:        #111111;
+      --text-body:   #444444;
+      --text-muted:  #888888;
+      --text-dim:    #666666;
+      --shadow-sm:   0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md:   0 4px 16px rgba(0,0,0,0.09), 0 2px 4px rgba(0,0,0,0.05);
+      --radius:      10px;
+      --mono:        'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text-body);
+      font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Layout ── */
+    .layout {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      height: 64px;
+      box-shadow: var(--shadow-sm);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .logo-img {
+      height: 30px;
+      width: auto;
+      flex-shrink: 0;
+    }
+
+    .logo-divider {
+      width: 1px;
+      height: 22px;
+      background: var(--border2);
+      flex-shrink: 0;
+    }
+
+    .logo-text {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.4px;
+      color: var(--navy);
+    }
+
+    .badge {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      background: var(--navy-dim);
+      color: var(--navy);
+      border: 1px solid #C5D4EF;
+      border-radius: 5px;
+      padding: 2px 8px;
+    }
+
+    .header-right {
+      margin-left: auto;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      overflow: hidden;
+    }
+
+    /* ── Left panel ── */
+    .panel-left {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 28px 24px;
+      gap: 22px;
+      overflow-y: auto;
+    }
+
+    .section-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 220px;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.75;
+      padding: 12px 14px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    textarea:focus {
+      border-color: var(--navy);
+      box-shadow: 0 0 0 3px rgba(13,45,107,0.08);
+    }
+
+    textarea::placeholder { color: var(--text-muted); }
+
+    .url-counter {
+      text-align: right;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: -14px;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 10px 18px;
+      transition: all 0.15s;
+      white-space: nowrap;
+      letter-spacing: -0.1px;
+    }
+
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-primary {
+      background: var(--navy);
+      color: #fff;
+      width: 100%;
+      box-shadow: 0 2px 6px rgba(13,45,107,0.22);
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: var(--navy-hover);
+      box-shadow: 0 4px 12px rgba(13,45,107,0.3);
+      transform: translateY(-1px);
+    }
+    .btn-primary:active:not(:disabled) { transform: translateY(0); }
+
+    .btn-green {
+      background: var(--green-dim);
+      color: var(--green);
+      border: 1.5px solid #86EFAC;
+      font-size: 12px;
+      padding: 8px 14px;
+    }
+    .btn-green:hover:not(:disabled) { background: #BBF7D0; }
+
+    .btn-add {
+      background: var(--navy-dim);
+      color: var(--navy);
+      border: 1.5px solid #C5D4EF;
+      width: 100%;
+      margin-top: 4px;
+      font-size: 12px;
+      padding: 8px 14px;
+    }
+    .btn-add:hover:not(:disabled) { background: #D6E4F7; }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-dim);
+      border: 1.5px solid var(--border);
+      font-size: 12px;
+      padding: 8px 14px;
+    }
+    .btn-ghost:hover:not(:disabled) { border-color: var(--border2); color: var(--text); }
+
+    /* ── Stats bar ── */
+    .stats-bar {
+      display: flex;
+      gap: 10px;
+    }
+
+    .stat {
+      flex: 1;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 10px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 5px;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .stat-new   .stat-value { color: var(--green); }
+    .stat-dupe  .stat-value { color: var(--red); }
+    .stat-total .stat-value { color: var(--navy); }
+
+    /* ── Divider ── */
+    .divider {
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Actions block ── */
+    .actions-block {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .actions-title {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: -4px;
+    }
+
+    /* ── Progress bar ── */
+    .progress-label {
+      font-size: 12px;
+      color: var(--text-dim);
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+
+    .progress-track {
+      height: 5px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--navy);
+      border-radius: 99px;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    /* ── Right panel ── */
+    .panel-right {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .results-header {
+      padding: 16px 28px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--surface);
+    }
+
+    .results-header h2 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-dim);
+    }
+
+    .filter-tabs {
+      display: flex;
+      gap: 3px;
+      margin-left: auto;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 3px;
+    }
+
+    .tab {
+      padding: 4px 14px;
+      border-radius: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      transition: all 0.15s;
+    }
+
+    .tab.active {
+      background: var(--surface);
+      color: var(--navy);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .tab:hover:not(.active) { color: var(--text-dim); }
+
+    /* ── Results list ── */
+    .results-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .empty-state {
+      margin: auto;
+      text-align: center;
+      color: var(--text-muted);
+      padding: 60px 20px;
+    }
+
+    .empty-icon {
+      font-size: 38px;
+      margin-bottom: 14px;
+      opacity: 0.25;
+    }
+
+    .empty-state p {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.8;
+    }
+
+    /* ── Result card ── */
+    .result-card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.15s, border-color 0.15s;
+    }
+
+    .result-card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: var(--border2);
+    }
+
+    .result-card.new  { border-left: 4px solid var(--green); }
+    .result-card.dupe { border-left: 4px solid var(--red); }
+
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 16px;
+    }
+
+    .status-dot {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .result-card.new  .status-dot { background: var(--green-dim); color: var(--green); }
+    .result-card.dupe .status-dot { background: var(--red-dim);   color: var(--red); }
+
+    .card-url {
+      flex: 1;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      word-break: break-all;
+      line-height: 1.6;
+    }
+
+    .card-url a { color: inherit; text-decoration: none; }
+    .card-url a:hover { color: var(--navy); }
+
+    .card-status-label {
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 2px;
+      letter-spacing: 0.3px;
+    }
+
+    .result-card.new  .card-status-label { color: var(--green); }
+    .result-card.dupe .card-status-label { color: var(--red); }
+
+    /* Duplicate match block */
+    .match-block {
+      margin: 0 16px 14px;
+      background: #FAFBFD;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .match-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--red);
+      margin-bottom: 2px;
+    }
+
+    .match-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .match-meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .match-pill {
+      font-size: 11px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 2px 8px;
+      color: var(--text-dim);
+      font-weight: 500;
+    }
+
+    .match-url {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      word-break: break-all;
+    }
+
+    .match-url a { color: var(--navy); text-decoration: none; }
+    .match-url a:hover { text-decoration: underline; }
+
+    /* New URL action row */
+    .new-actions {
+      padding: 0 16px 14px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .fetch-error {
+      font-size: 11px;
+      color: var(--amber);
+      padding: 0 16px 12px;
+      font-weight: 500;
+    }
+
+    /* ── Pool notice ── */
+    .pool-notice {
+      background: var(--green-dim);
+      border: 1.5px solid #86EFAC;
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--green);
+    }
+
+    /* ── Loading skeleton ── */
+    @keyframes pulse {
+      0%, 100% { opacity: 0.45; }
+      50%       { opacity: 0.85; }
+    }
+
+    /* ── Spinner ── */
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      background: var(--surface);
+      border: 1.5px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 12px 20px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      box-shadow: var(--shadow-md);
+      transform: translateY(80px);
+      opacity: 0;
+      transition: transform 0.25s, opacity 0.25s;
+      z-index: 999;
+      max-width: 360px;
+    }
+
+    #toast.show    { transform: translateY(0); opacity: 1; }
+    #toast.success { border-color: #86EFAC; color: var(--green); }
+    #toast.error   { border-color: #FCA5A5; color: var(--red); }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+      .panel-left { border-right: none; border-bottom: 1px solid var(--border); max-height: 400px; }
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- Header -->
+  <header>
+    <img src="logo.png" alt="01Gov" class="logo-img" onerror="this.style.display='none'">
+    <div class="logo-divider"></div>
+    <div class="logo-text">01Checker</div>
+    <div class="badge">Internal Tool</div>
+    <div class="header-right">01Gov Research · Topic Duplicate Checker</div>
+  </header>
+
+  <main>
+    <!-- Left panel: input + controls -->
+    <div class="panel-left">
+
+      <div>
+        <div class="section-label">Input URLs</div>
+        <textarea id="urlInput"
+          placeholder="Paste URLs here, one per line&#10;&#10;https://example.gov/initiative-1&#10;https://example.gov/initiative-2"
+          spellcheck="false"></textarea>
+        <div class="url-counter" id="urlCounter">0 URLs</div>
+      </div>
+
+      <button class="btn btn-primary" id="checkBtn" onclick="checkUrls()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        Check URLs
+      </button>
+
+      <div id="progressSection" style="display:none">
+        <div class="progress-label" id="progressLabel">Checking 0 of 0…</div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Stats -->
+      <div>
+        <div class="section-label">Results Summary</div>
+        <div class="stats-bar">
+          <div class="stat stat-total">
+            <div class="stat-value" id="statTotal">—</div>
+            <div class="stat-label">Total</div>
+          </div>
+          <div class="stat stat-new">
+            <div class="stat-value" id="statNew">—</div>
+            <div class="stat-label">New</div>
+          </div>
+          <div class="stat stat-dupe">
+            <div class="stat-value" id="statDupe">—</div>
+            <div class="stat-label">Dupes</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Actions -->
+      <div class="actions-block">
+        <div class="section-label">Actions for New Topics</div>
+        <p class="actions-title">Applies to all NEW results from the last check.</p>
+        <button class="btn btn-green" id="extractBtn" onclick="extractAndDownload()" disabled>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Extract & Download CSV
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Right panel: results -->
+    <div class="panel-right">
+      <div class="results-header">
+        <h2>Results</h2>
+        <div class="filter-tabs">
+          <button class="tab active" onclick="filterResults('all', this)">All</button>
+          <button class="tab" onclick="filterResults('new', this)">New</button>
+          <button class="tab" onclick="filterResults('dupe', this)">Duplicates</button>
+        </div>
+      </div>
+
+      <div class="results-list" id="resultsList">
+        <div class="empty-state">
+          <div class="empty-icon">⬡</div>
+          <p>Paste URLs in the left panel and click <strong>Check URLs</strong><br>to see duplicate analysis results here.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+  const API_BASE = 'http://localhost:3000';
+
+  let lastResults = [];   // { url, status, match?, fetchError? }
+  let extracted   = [];   // from /api/extract
+  let activeFilter = 'all';
+
+  // ── URL counter ──────────────────────────────────────────────────────────
+  document.getElementById('urlInput').addEventListener('input', updateCounter);
+
+  function updateCounter() {
+    const urls = parseUrls();
+    const el = document.getElementById('urlCounter');
+    el.textContent = urls.length === 0 ? '0 URLs'
+                   : urls.length === 1 ? '1 URL'
+                   : `${urls.length} URLs`;
+  }
+
+  function parseUrls() {
+    return document.getElementById('urlInput').value
+      .split('\n')
+      .map(s => s.trim())
+      .filter(s => s.startsWith('http://') || s.startsWith('https://'));
+  }
+
+  // ── Check URLs ───────────────────────────────────────────────────────────
+  async function checkUrls() {
+    const urls = parseUrls();
+    if (!urls.length) { toast('Paste at least one URL first.', 'error'); return; }
+
+    const btn = document.getElementById('checkBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Checking…';
+    setResultsLoading(urls.length);
+    showProgress(0, urls.length);
+    extracted = [];
+    lastResults = [];
+
+    try {
+      const res = await fetch(`${API_BASE}/api/check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ urls }),
+      });
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop();
+        for (const part of parts) {
+          const dataLine = part.split('\n').find(l => l.startsWith('data: '));
+          if (!dataLine) continue;
+          let event;
+          try { event = JSON.parse(dataLine.slice(6)); } catch { continue; }
+          if (event.done) {
+            lastResults = event.results;
+          } else if (event.error) {
+            throw new Error(event.error);
+          } else {
+            showProgress(event.checked, event.total);
+          }
+        }
+      }
+
+      if (lastResults.length > 0) {
+        renderResults();
+        updateStats();
+        updateActionButtons();
+        const newUrls = lastResults.filter(r => r.status === 'new').map(r => r.url);
+        await autoAddToPool(newUrls);
+      }
+    } catch (err) {
+      toast(`Check failed: ${err.message}`, 'error');
+      renderError(err.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Check URLs`;
+      hideProgress();
+    }
+  }
+
+  // ── Extract & Download CSV ───────────────────────────────────────────────
+  async function extractAndDownload() {
+    const newUrls = lastResults.filter(r => r.status === 'new').map(r => r.url);
+    if (!newUrls.length) { toast('No new URLs to extract.', 'error'); return; }
+
+    const btn = document.getElementById('extractBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Extracting…';
+
+    try {
+      const res = await fetch(`${API_BASE}/api/extract`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ urls: newUrls }),
+      });
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+      const data = await res.json();
+      extracted = data.results.filter(r => !r.error);
+
+      if (!extracted.length) { toast('No data could be extracted.', 'error'); return; }
+
+      downloadCSV(extracted);
+      toast(`CSV downloaded — ${extracted.length} topic(s) extracted.`, 'success');
+    } catch (err) {
+      toast(`Extract failed: ${err.message}`, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Extract & Download CSV`;
+    }
+  }
+
+  // ── Add to Pool ──────────────────────────────────────────────────────────
+  async function autoAddToPool(newUrls) {
+    if (!newUrls.length) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/add`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topics: newUrls.map(url => ({ url })) }),
+      });
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+      const data = await res.json();
+      prependPoolNotice(data.added, data.pool_size);
+    } catch (err) {
+      toast(`Auto-add failed: ${err.message}`, 'error');
+    }
+  }
+
+  function prependPoolNotice(added, poolSize) {
+    const notice = document.createElement('div');
+    notice.className = 'pool-notice';
+    notice.textContent = `✓ ${added} new topic${added !== 1 ? 's' : ''} added to pool automatically. Pool now has ${poolSize} entries.`;
+    document.getElementById('resultsList').prepend(notice);
+  }
+
+  // ── CSV download ─────────────────────────────────────────────────────────
+  function downloadCSV(rows) {
+    const headers = ['url', 'country', 'agency', 'practice_title', 'description'];
+    const escape  = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const lines   = [
+      headers.join(','),
+      ...rows.map(r => headers.map(h => escape(r[h])).join(',')),
+    ];
+    const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const a    = document.createElement('a');
+    a.href     = URL.createObjectURL(blob);
+    a.download = `01checker-export-${date()}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function date() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  // ── Progress ─────────────────────────────────────────────────────────────
+  function showProgress(checked, total) {
+    document.getElementById('progressSection').style.display = 'block';
+    document.getElementById('progressLabel').textContent = `Checking ${checked} of ${total}…`;
+    document.getElementById('progressFill').style.width =
+      `${total > 0 ? Math.round((checked / total) * 100) : 0}%`;
+  }
+
+  function hideProgress() {
+    document.getElementById('progressSection').style.display = 'none';
+    document.getElementById('progressFill').style.width = '0%';
+  }
+
+  // ── Render ───────────────────────────────────────────────────────────────
+  function setResultsLoading(count) {
+    const list = document.getElementById('resultsList');
+    list.innerHTML = Array.from({ length: count }, (_, i) => `
+      <div class="result-card" style="opacity:0.5; animation: pulse 1.4s ease-in-out infinite;">
+        <div class="card-header">
+          <div class="status-dot" style="background:var(--border)"></div>
+          <div class="card-url" style="color:var(--text-muted)">Checking URL ${i + 1}…</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function renderError(msg) {
+    document.getElementById('resultsList').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">⚠</div>
+        <p style="color:var(--red)">${msg}</p>
+      </div>`;
+  }
+
+  function renderResults() {
+    const list = document.getElementById('resultsList');
+    const toShow = activeFilter === 'all' ? lastResults
+                 : lastResults.filter(r => r.status === (activeFilter === 'new' ? 'new' : 'duplicate'));
+
+    if (!toShow.length) {
+      list.innerHTML = `<div class="empty-state"><div class="empty-icon">◎</div><p>No results match this filter.</p></div>`;
+      return;
+    }
+
+    list.innerHTML = toShow.map(r => buildCard(r)).join('');
+  }
+
+  function buildCard(r) {
+    const isNew  = r.status === 'new';
+    const cls    = isNew ? 'new' : 'dupe';
+    const icon   = isNew ? '✓' : '✕';
+    const label  = isNew ? 'NEW' : 'DUPLICATE';
+
+    const matchBlock = !isNew && r.match ? `
+      <div class="match-block">
+        <div class="match-label">Existing Match</div>
+        <div class="match-title">${esc(r.match.title || '—')}</div>
+        <div class="match-meta">
+          ${r.match.country ? `<span class="match-pill">${esc(r.match.country)}</span>` : ''}
+          ${r.match.agency  ? `<span class="match-pill">${esc(r.match.agency)}</span>`  : ''}
+        </div>
+        ${r.match.url ? `<div class="match-url"><a href="${esc(r.match.url)}" target="_blank" rel="noopener">${esc(r.match.url)}</a></div>` : ''}
+      </div>` : '';
+
+    const errorNote = r.fetchError
+      ? `<div class="fetch-error">⚠ Page fetch failed — ${esc(r.fetchError)} (treated as new)</div>` : '';
+
+    const newActions = isNew ? `
+      <div class="new-actions">
+        <span style="font-size:11px; color:var(--text-muted)">Ready to extract metadata</span>
+      </div>` : '';
+
+    return `
+      <div class="result-card ${cls}">
+        <div class="card-header">
+          <div class="status-dot">${icon}</div>
+          <div class="card-url"><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.url)}</a></div>
+          <div class="card-status-label">${label}</div>
+        </div>
+        ${matchBlock}
+        ${errorNote}
+        ${newActions}
+      </div>`;
+  }
+
+  function updateStats() {
+    const total = lastResults.length;
+    const news  = lastResults.filter(r => r.status === 'new').length;
+    const dupes = lastResults.filter(r => r.status === 'duplicate').length;
+    document.getElementById('statTotal').textContent = total;
+    document.getElementById('statNew').textContent   = news;
+    document.getElementById('statDupe').textContent  = dupes;
+  }
+
+  function updateActionButtons() {
+    const hasNew = lastResults.some(r => r.status === 'new');
+    document.getElementById('extractBtn').disabled = !hasNew;
+  }
+
+  function filterResults(filter, tabEl) {
+    activeFilter = filter;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tabEl.classList.add('active');
+    if (lastResults.length) renderResults();
+  }
+
+  // ── Toast ────────────────────────────────────────────────────────────────
+  let toastTimer;
+  function toast(msg, type = '') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className   = `show ${type}`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.className = ''; }, 3500);
+  }
+
+  // ── Escape HTML ──────────────────────────────────────────────────────────
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+</body>
+</html>
