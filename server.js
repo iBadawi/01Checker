@@ -221,12 +221,14 @@ PAGE URL: ${url}
 PAGE CONTENT (first 3000 chars):
 ${pageText}
 
+Respond entirely in Arabic. All field values must be in Arabic.
+
 Respond with ONLY valid JSON (no markdown, no extra text):
 {
-  "country": "<country name>",
-  "agency": "<government agency or entity name>",
-  "practice_title": "<short descriptive title of the practice>",
-  "description": "<what the practice does, max 80 words>"
+  "country": "<اسم الدولة>",
+  "agency": "<اسم الجهة الحكومية أو المؤسسة>",
+  "practice_title": "<عنوان قصير ووصفي للممارسة>",
+  "description": "<ما تفعله هذه الممارسة، بحد أقصى 80 كلمة>"
 }`,
             },
           ],

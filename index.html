@@ -672,7 +672,7 @@
 <div id="toast"></div>
 
 <script>
-  const API_BASE = 'http://localhost:3000';
+  const API_BASE = 'https://01checker-production.up.railway.app';
 
   let lastResults = [];   // { url, status, match?, fetchError? }
   let extracted   = [];   // from /api/extract
@@ -816,11 +816,11 @@
 
   // ── CSV download ─────────────────────────────────────────────────────────
   function downloadCSV(rows) {
-    const headers = ['url', 'country', 'agency', 'practice_title', 'description'];
+    const headers = ['country', 'agency', 'practice_title', 'description', 'الرابط'];
     const escape  = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const lines   = [
       headers.join(','),
-      ...rows.map(r => headers.map(h => escape(r[h])).join(',')),
+      ...rows.map(r => [...['country', 'agency', 'practice_title', 'description'].map(h => escape(r[h])), escape(r.url)].join(',')),
     ];
     const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
     const a    = document.createElement('a');
