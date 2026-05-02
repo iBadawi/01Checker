@@ -5,7 +5,7 @@ const path = require('path');
 const Anthropic = require('@anthropic-ai/sdk');
 
 const app = express();
-app.use(cors({ origin: ['https://01checker.netlify.app', 'http://localhost:3000'] }));
+app.use(cors());
 app.use(express.json());
 
 const POOL_PATH = path.join(__dirname, 'pool.json');
